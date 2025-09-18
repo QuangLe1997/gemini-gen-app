@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Image Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        .input-section {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 25px;
+        }
+        
+        .output-section {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 25px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-input-display {
+            padding: 12px;
+            border: 2px dashed #e1e5e9;
+            border-radius: 8px;
+            text-align: center;
+            background: white;
+            transition: border-color 0.3s;
+        }
+        
+        .file-input-display:hover {
+            border-color: #4facfe;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .cost-display {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .cost-display h3 {
+            color: #2d5a2d;
+            margin-bottom: 10px;
+        }
+        
+        .cost-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            color: #2d5a2d;
+        }
+        
+        .cost-total {
+            font-weight: bold;
+            border-top: 1px solid #c3e6c3;
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+        
+        .result-image {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #ffe6e6;
+            border: 1px solid #ffcccc;
+            color: #cc0000;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 12px;
+            background: #e1e5e9;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .tab.active {
+            background: #4facfe;
+            color: white;
+        }
+        
+        .tab:first-child {
+            border-radius: 8px 0 0 8px;
+        }
+        
+        .tab:last-child {
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .session-cost {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .reset-btn {
+            background: #ff7675;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Gemini Image Generator</h1>
+            <p>Generate and edit images with Google Gemini AI</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="input-section">
+                <div class="session-cost">
+                    <strong>Session Total: $<span id="sessionTotal">0.000000</span></strong>
+                    <button class="reset-btn" onclick="resetCost()">Reset</button>
+                </div>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('text-to-image')">Text to Image</button>
+                    <button class="tab" onclick="switchTab('image-to-image')">Image to Image</button>
+                </div>
+                
+                <!-- Text to Image Tab -->
+                <div id="text-to-image" class="tab-content active">
+                    <form id="textToImageForm">
+                        <div class="form-group">
+                            <label for="model1">Model:</label>
+                            <select id="model1" name="model">
+                                <option value="gemini-2.5-flash-image-preview">Gemini 2.5 Flash Image (Recommended)</option>
+                                <option value="gemini-2.0-flash-preview-image-generation">Gemini 2.0 Flash Image</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="prompt1">Prompt:</label>
+                            <textarea id="prompt1" name="prompt" placeholder="Describe the image you want to generate..." required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn" id="generateBtn1">Generate Image</button>
+                    </form>
+                </div>
+                
+                <!-- Image to Image Tab -->
+                <div id="image-to-image" class="tab-content">
+                    <form id="imageToImageForm" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="model2">Model:</label>
+                            <select id="model2" name="model">
+                                <option value="gemini-2.5-flash-image-preview">Gemini 2.5 Flash Image (Recommended)</option>
+                                <option value="gemini-2.0-flash-preview-image-generation">Gemini 2.0 Flash Image</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="inputImage">Input Image:</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="inputImage" name="image" accept="image/*" class="file-input" required>
+                                <div class="file-input-display">Click to select an image</div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="prompt2">Prompt:</label>
+                            <textarea id="prompt2" name="prompt" placeholder="Describe how to modify the image..." required></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn" id="generateBtn2">Generate Image</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <h3>Result</h3>
+                <div id="output">
+                    <p style="text-align: center; color: #666; padding: 40px;">Generated image will appear here</p>
+                </div>
+                <div id="costDisplay"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSessionTotal = 0;
+
+        function switchTab(tabName) {
+            // Remove active class from all tabs and content
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and content
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        function updateFileInputDisplay() {
+            const fileInput = document.getElementById('inputImage');
+            const display = document.querySelector('.file-input-display');
+            
+            if (fileInput.files.length > 0) {
+                display.textContent = fileInput.files[0].name;
+            } else {
+                display.textContent = 'Click to select an image';
+            }
+        }
+
+        function displayCost(costInfo) {
+            const costDisplay = document.getElementById('costDisplay');
+            costDisplay.innerHTML = `
+                <div class="cost-display">
+                    <h3>💰 Cost Breakdown</h3>
+                    <div class="cost-item">
+                        <span>Input text (${costInfo.input_chars} chars):</span>
+                        <span>$${costInfo.input_text_cost.toFixed(6)}</span>
+                    </div>
+                    ${costInfo.input_image_cost > 0 ? `
+                    <div class="cost-item">
+                        <span>Input image processing:</span>
+                        <span>$${costInfo.input_image_cost.toFixed(6)}</span>
+                    </div>
+                    ` : ''}
+                    <div class="cost-item">
+                        <span>Output image:</span>
+                        <span>$${costInfo.output_image_cost.toFixed(6)}</span>
+                    </div>
+                    <div class="cost-item cost-total">
+                        <span>Total:</span>
+                        <span>$${costInfo.total_cost.toFixed(6)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateSessionTotal(total) {
+            currentSessionTotal = total;
+            document.getElementById('sessionTotal').textContent = total.toFixed(6);
+        }
+
+        function resetCost() {
+            fetch('/api/reset_cost')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateSessionTotal(0);
+                    }
+                });
+        }
+
+        function showLoading() {
+            document.getElementById('output').innerHTML = '<div class="loading">Generating image...</div>';
+            document.getElementById('costDisplay').innerHTML = '';
+        }
+
+        function showError(error) {
+            document.getElementById('output').innerHTML = `<div class="error">Error: ${error}</div>`;
+        }
+
+        function showResult(imageData, costInfo, sessionTotal) {
+            document.getElementById('output').innerHTML = `<img src="${imageData}" alt="Generated Image" class="result-image">`;
+            displayCost(costInfo);
+            updateSessionTotal(sessionTotal);
+        }
+
+        // Text to Image Form
+        document.getElementById('textToImageForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {
+                prompt: formData.get('prompt'),
+                model: formData.get('model')
+            };
+            
+            showLoading();
+            document.getElementById('generateBtn1').disabled = true;
+            
+            fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showResult(data.image, data.cost_info, data.session_total);
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                showError(error.message);
+            })
+            .finally(() => {
+                document.getElementById('generateBtn1').disabled = false;
+            });
+        });
+
+        // Image to Image Form
+        document.getElementById('imageToImageForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            showLoading();
+            document.getElementById('generateBtn2').disabled = true;
+            
+            fetch('/api/generate_with_input', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showResult(data.image, data.cost_info, data.session_total);
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                showError(error.message);
+            })
+            .finally(() => {
+                document.getElementById('generateBtn2').disabled = false;
+            });
+        });
+
+        // File input display update
+        document.getElementById('inputImage').addEventListener('change', updateFileInputDisplay);
+    </script>
+</body>
+</html>
