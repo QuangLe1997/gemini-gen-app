@@ -272,5 +272,5 @@ cleanup_thread.start()
 
 if __name__ == '__main__':
     print("Starting Gemini Image Generator Web API...")
-    print("Open your browser and go to: http://localhost:5001")
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    print("Open your browser and go to: http://localhost:5000")
+    app.run(debug=True, host='0.0.0.0', port=5000)
