@@ -294,6 +294,15 @@
                 <div id="text-to-image" class="tab-content active">
                     <form id="textToImageForm">
                         <div class="form-group">
+                            <label for="apiKey1">🔑 Gemini API Key:</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="password" id="apiKey1" name="api_key" placeholder="Enter your Gemini API key..." required style="flex: 1;">
+                                <button type="button" onclick="clearSavedApiKey()" style="background: #ff7675; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Clear</button>
+                            </div>
+                            <small style="color: #666; font-size: 12px;">Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a> • Key is saved locally</small>
+                        </div>
+                        
+                        <div class="form-group">
                             <label for="model1">Model:</label>
                             <select id="model1" name="model">
                                 <option value="gemini-2.5-flash-image-preview">Gemini 2.5 Flash Image (Recommended)</option>
@@ -313,6 +322,15 @@
                 <!-- Image to Image Tab -->
                 <div id="image-to-image" class="tab-content">
                     <form id="imageToImageForm" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="apiKey2">🔑 Gemini API Key:</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="password" id="apiKey2" name="api_key" placeholder="Enter your Gemini API key..." required style="flex: 1;">
+                                <button type="button" onclick="clearSavedApiKey()" style="background: #ff7675; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">Clear</button>
+                            </div>
+                            <small style="color: #666; font-size: 12px;">Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a> • Key is saved locally</small>
+                        </div>
+                        
                         <div class="form-group">
                             <label for="model2">Model:</label>
                             <select id="model2" name="model">
@@ -351,6 +369,29 @@
 
     <script>
         let currentSessionTotal = 0;
+
+        // Load saved API key from localStorage on page load
+        function loadSavedApiKey() {
+            const savedApiKey = localStorage.getItem('gemini_api_key');
+            if (savedApiKey) {
+                document.getElementById('apiKey1').value = savedApiKey;
+                document.getElementById('apiKey2').value = savedApiKey;
+            }
+        }
+
+        // Save API key to localStorage
+        function saveApiKey(apiKey) {
+            if (apiKey && apiKey.trim()) {
+                localStorage.setItem('gemini_api_key', apiKey.trim());
+            }
+        }
+
+        // Clear saved API key
+        function clearSavedApiKey() {
+            localStorage.removeItem('gemini_api_key');
+            document.getElementById('apiKey1').value = '';
+            document.getElementById('apiKey2').value = '';
+        }
 
         function switchTab(tabName) {
             // Remove active class from all tabs and content
@@ -435,7 +476,13 @@
             e.preventDefault();
             
             const formData = new FormData(this);
+            const apiKey = formData.get('api_key');
+            
+            // Save API key to localStorage
+            saveApiKey(apiKey);
+            
             const data = {
+                api_key: apiKey,
                 prompt: formData.get('prompt'),
                 model: formData.get('model')
             };
@@ -471,6 +518,10 @@
             e.preventDefault();
             
             const formData = new FormData(this);
+            const apiKey = formData.get('api_key');
+            
+            // Save API key to localStorage
+            saveApiKey(apiKey);
             
             showLoading();
             document.getElementById('generateBtn2').disabled = true;
@@ -497,6 +548,20 @@
 
         // File input display update
         document.getElementById('inputImage').addEventListener('change', updateFileInputDisplay);
+
+        // Load saved API key when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedApiKey();
+        });
+
+        // Sync API keys between tabs
+        document.getElementById('apiKey1').addEventListener('input', function() {
+            document.getElementById('apiKey2').value = this.value;
+        });
+
+        document.getElementById('apiKey2').addEventListener('input', function() {
+            document.getElementById('apiKey1').value = this.value;
+        });
     </script>
 </body>
 </html>

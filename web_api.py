@@ -72,10 +72,16 @@ def get_models():
 def generate_image():
     """Generate image from prompt and optional input image"""
     try:
-        # Get form data
-        api_key = request.form.get('api_key')
-        model = request.form.get('model', 'gemini-2.5-flash-image-preview')
-        prompt = request.form.get('prompt')
+        # Get data from JSON or form
+        if request.is_json:
+            data = request.get_json()
+            api_key = data.get('api_key')
+            model = data.get('model', 'gemini-2.5-flash-image-preview')
+            prompt = data.get('prompt')
+        else:
+            api_key = request.form.get('api_key')
+            model = request.form.get('model', 'gemini-2.5-flash-image-preview')
+            prompt = request.form.get('prompt')
         
         # Validate required fields
         if not api_key:
