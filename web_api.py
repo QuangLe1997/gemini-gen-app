@@ -89,34 +89,40 @@ def generate_image():
         if not prompt:
             return jsonify({'success': False, 'error': 'Prompt is required'}), 400
         
-        # Handle file upload
-        input_file_path = None
-        if 'input_image' in request.files:
-            file = request.files['input_image']
-            if file and file.filename and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                unique_filename = f"{uuid.uuid4()}_{filename}"
-                input_file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                file.save(input_file_path)
-        
-        # Create task
-        task_id = str(uuid.uuid4())
-        task = GenerationTask(task_id)
-        active_tasks[task_id] = task
-        
-        # Start generation in background
-        thread = threading.Thread(
-            target=generate_image_background,
-            args=(task, api_key, model, prompt, input_file_path)
-        )
-        thread.daemon = True
-        thread.start()
-        
-        return jsonify({
-            'success': True,
-            'task_id': task_id,
-            'message': 'Generation started'
-        })
+        # For text-to-image (no file upload), generate directly
+        try:
+            # Create generator
+            generator = GeminiImageGenerator(api_key, model)
+            
+            # Generate output path
+            output_filename = f"generated_{uuid.uuid4()}.png"
+            output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+            
+            # Generate image
+            result_path = generator.generate_image_from_prompt(prompt, output_path)
+            
+            # Read generated image and encode as base64
+            with open(result_path, 'rb') as f:
+                image_data = base64.b64encode(f.read()).decode('utf-8')
+            
+            # Calculate cost
+            cost_info = generator.calculate_cost(prompt, has_input_image=False)
+            
+            # Update session total (simple tracking)
+            session_total = cost_info['total_cost']
+            
+            return jsonify({
+                'success': True,
+                'image': f"data:image/png;base64,{image_data}",
+                'cost_info': cost_info,
+                'session_total': session_total
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
         
     except Exception as e:
         return jsonify({
@@ -228,6 +234,79 @@ def preview_image(task_id):
         return jsonify({'error': 'File not found'}), 404
     
     return send_file(task.result_path)
+
+@app.route('/api/generate_with_input', methods=['POST'])
+def generate_with_input():
+    """Generate image with input image (direct response for compatibility)"""
+    try:
+        # Get form data
+        api_key = request.form.get('api_key')
+        model = request.form.get('model', 'gemini-2.5-flash-image-preview')
+        prompt = request.form.get('prompt')
+        
+        # Validate required fields
+        if not api_key:
+            return jsonify({'success': False, 'error': 'API key is required'}), 400
+        if not prompt:
+            return jsonify({'success': False, 'error': 'Prompt is required'}), 400
+        
+        # Handle file upload
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'error': 'Input image is required'}), 400
+        
+        file = request.files['image']
+        if not file or not file.filename:
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'success': False, 'error': 'Invalid file type'}), 400
+        
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+        input_file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        file.save(input_file_path)
+        
+        try:
+            # Create generator
+            generator = GeminiImageGenerator(api_key, model)
+            
+            # Generate output path
+            output_filename = f"generated_{uuid.uuid4()}.png"
+            output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+            
+            # Generate image
+            result_path = generator.generate_image_with_input(
+                input_file_path, prompt, output_path
+            )
+            
+            # Read generated image and encode as base64
+            with open(result_path, 'rb') as f:
+                image_data = base64.b64encode(f.read()).decode('utf-8')
+            
+            # Calculate cost
+            cost_info = generator.calculate_cost(prompt, has_input_image=True)
+            
+            # Update session total (simple tracking)
+            session_total = cost_info['total_cost']
+            
+            return jsonify({
+                'success': True,
+                'image': f"data:image/png;base64,{image_data}",
+                'cost_info': cost_info,
+                'session_total': session_total
+            })
+            
+        finally:
+            # Clean up input file
+            if os.path.exists(input_file_path):
+                os.remove(input_file_path)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/cleanup/<task_id>', methods=['DELETE'])
 def cleanup_task(task_id):
